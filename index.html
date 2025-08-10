@@ -907,7 +907,7 @@
                 return;
             }
 
-            if (apiKey === "AIzaSyAn0X1zPAreHP9TXaGZyyXcOF_g3EAW3XE" || !apiKey) {
+            if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
                 showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
                 return;
             }
@@ -934,163 +934,140 @@
                 }
 
 
-                const prompt = `「${inputWord}」という単語と議論が白熱するような、同じレイヤー・カテゴリの単語を一つだけ、日本語で提案してください。例えば「大乱闘スマッシュブラザーズ」に対して「アクションゲーム」ではなく、「マリオカート」や「マインクラフト」のように、より具体的な単語にしてください。応答はJSON形式で、word1とword2のキーを持つオブジェクトの配列にしてください。word1は「${inputWord}」、word2はあなたが考えた単語にしてください。`;
-                const chatHistory = [];
-                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-                
-                const payload = {
-                    contents: chatHistory,
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "ARRAY",
-                            items: {
-                                type: "OBJECT",
-                                properties: {
-                                    "word1": { "type": "STRING" },
-                                    "word2": { "type": "STRING" }
-                                },
-                                "propertyOrdering": ["word1", "word2"]
-                            }
-                        }
-                    }
-                };
+                const prompt = `「${inputWord}」という単語と議論が白熱するような、同じレイヤー・カテゴリの単語を一つだけ、日本語で提案してください。例えば「大乱闘スマッシュブラザーズ」に対して「アクションゲーム」ではなく、「マリオカート」や「マインクラフト」のような単語が望ましいです。返答は単語一つのみで、それ以外の説明や文章は一切含めないでください。`;
 
-                let response;
-                let result;
-                for (let i = 0; i <= maxRetries; i++) {
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                let responseText = null;
+                for (let i = 0; i < maxRetries; i++) {
                     try {
-                        response = await fetch(apiUrl, {
+                        const chatHistory = [];
+                        chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                        const payload = { contents: chatHistory };
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                        const response = await fetch(apiUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
-                        if (response.status !== 429) {
-                            result = await response.json();
-                            break;
+
+                        if (!response.ok) {
+                            throw new Error(`API error: ${response.status} ${response.statusText}`);
                         }
-                        await delay(1000 * (2 ** i));
+
+                        const result = await response.json();
+                        if (result.candidates && result.candidates.length > 0 &&
+                            result.candidates[0].content && result.candidates[0].content.parts &&
+                            result.candidates[0].content.parts.length > 0) {
+                            responseText = result.candidates[0].content.parts[0].text;
+                            break; // 成功したらループを抜ける
+                        } else {
+                            throw new Error('API response format is not as expected.');
+                        }
                     } catch (error) {
-                        console.error('Fetch error:', error);
-                        throw error;
+                        console.error(`Attempt ${i + 1} failed:`, error);
+                        if (i < maxRetries - 1) {
+                            await delay(Math.pow(2, i) * 1000); // 指数バックオフ
+                        }
                     }
                 }
-                
-                if (result && result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
-                    const jsonString = result.candidates[0].content.parts[0].text;
-                    const newPairs = JSON.parse(jsonString);
-                    
-                    if (Array.isArray(newPairs) && newPairs.length > 0) {
-                        const newWord1 = newPairs[0].word1;
-                        const newWord2 = newPairs[0].word2;
-                        
-                        // 新しい単語ペアの場合
-                        setupGame({ word1: newWord1, word2: newWord2 });
-                        
-                        closeGeminiThemeModal();
-                    } else {
-                        showCustomMessage('APIエラー', 'Geminiからの応答形式が正しくありませんでした。');
-                    }
+
+                if (responseText) {
+                    const generatedWord = responseText.trim();
+                    const newPair = { word1: inputWord, word2: generatedWord, playCount: 0 };
+                    gameState.lastPlayedWordPair = newPair;
+                    setupGame({ word1: inputWord, word2: generatedWord });
+                    closeGeminiThemeModal();
                 } else {
-                    showCustomMessage('APIエラー', 'Geminiからの応答がありませんでした。');
+                    showCustomMessage('単語の生成に失敗', 'Geminiからの応答がありませんでした。もう一度お試しください。');
                 }
+
             } catch (error) {
-                console.error('Error generating themed word pairs:', error);
-                showCustomMessage('エラー', '単語の生成中にエラーが発生しました。もう一度お試しください。');
+                console.error("Error during API call:", error);
+                showCustomMessage('エラー', `単語の生成中にエラーが発生しました: ${error.message}`);
             } finally {
                 button.innerHTML = originalButtonText;
                 button.disabled = false;
             }
         }
         
-        // --- Gemini API連携関数 ---
         async function addWordPairFromGemini() {
-            if (apiKey === "AIzaSyAn0X1zPAreHP9TXaGZyyXcOF_g3EAW3XE" || !apiKey) {
-                showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
-                return;
-            }
-
             const button = document.getElementById('gemini-word-pair-button');
             const originalButtonText = button.innerHTML;
-            button.innerHTML = '<span class="loading-spinner"></span> 提案中...';
+            button.innerHTML = '<span class="loading-spinner"></span> 単語ペアを生成中...';
             button.disabled = true;
             
             const maxRetries = 3;
             const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-            
+
+            if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
+                showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
+                button.innerHTML = originalButtonText;
+                button.disabled = false;
+                return;
+            }
+
             try {
-                const chatHistory = [];
-                const prompt = "ワードウルフゲームのために、一般的な単語のペアを3つ提案してください。例えば「猫と犬」のように、関連しているが微妙に異なる単語のペアです。応答はJSON形式で、word1とword2のキーを持つオブジェクトの配列にしてください。word1とword2は必ず日本語で、同じテーマの単語にしてください。";
-                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-                
-                const payload = {
-                    contents: chatHistory,
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "ARRAY",
-                            items: {
-                                type: "OBJECT",
-                                properties: {
-                                    "word1": { "type": "STRING" },
-                                    "word2": { "type": "STRING" }
-                                },
-                                "propertyOrdering": ["word1", "word2"]
-                            }
-                        }
-                    }
-                };
-                
-                let response;
-                let result;
-                for (let i = 0; i <= maxRetries; i++) {
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                    
+                const prompt = 'ワードウルフのゲームで使える、議論が白熱しそうな単語のペアを日本語で1組だけ提案してください。例：「スマホ, 携帯電話」や「みかん, オレンジ」のような、似ているが明確に違う単語の組み合わせが望ましいです。返答はJSON形式で、`{"word1":"市民側の単語", "word2":"人狼側の単語"}`という構造にしてください。それ以外の説明や文章は一切含めないでください。';
+
+                let responseText = null;
+                for (let i = 0; i < maxRetries; i++) {
                     try {
-                        response = await fetch(apiUrl, {
+                        const chatHistory = [];
+                        chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                        const payload = {
+                            contents: chatHistory,
+                            generationConfig: {
+                                responseMimeType: "application/json",
+                                responseSchema: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        "word1": { "type": "STRING" },
+                                        "word2": { "type": "STRING" }
+                                    },
+                                    "propertyOrdering": ["word1", "word2"]
+                                }
+                            }
+                        };
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                        const response = await fetch(apiUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
-                        if (response.status !== 429) {
-                            result = await response.json();
-                            break;
+
+                        if (!response.ok) {
+                            throw new Error(`API error: ${response.status} ${response.statusText}`);
                         }
-                        await delay(1000 * (2 ** i));
+
+                        const result = await response.json();
+                        if (result.candidates && result.candidates.length > 0 &&
+                            result.candidates[0].content && result.candidates[0].content.parts &&
+                            result.candidates[0].content.parts.length > 0) {
+                            responseText = result.candidates[0].content.parts[0].text;
+                            break; // 成功したらループを抜ける
+                        } else {
+                            throw new Error('API response format is not as expected.');
+                        }
                     } catch (error) {
-                        console.error('Fetch error:', error);
-                        throw error;
+                        console.error(`Attempt ${i + 1} failed:`, error);
+                        if (i < maxRetries - 1) {
+                            await delay(Math.pow(2, i) * 1000); // 指数バックオフ
+                        }
                     }
                 }
                 
-                if (result && result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
-                    const jsonString = result.candidates[0].content.parts[0].text;
-                    const newPairs = JSON.parse(jsonString);
-                    
-                    if (Array.isArray(newPairs)) {
-                        newPairs.forEach(pair => {
-                            if (pair.word1 && pair.word2) {
-                                // 新しい単語ペアにplayCountを0で初期化
-                                wordPairs.push({ ...pair, playCount: 0 });
-                            }
-                        });
-                        saveWordPairs(); // localStorageに保存
-                        renderWordPairList();
-                        showCustomMessage('単語追加成功', 'Geminiが新しい単語ペアを提案してくれました！');
-                    } else {
-                         showCustomMessage('APIエラー', 'Geminiからの応答形式が正しくありませんでした。');
-                    }
+                if (responseText) {
+                    const parsedJson = JSON.parse(responseText);
+                    const newPair = { word1: parsedJson.word1, word2: parsedJson.word2, playCount: 0 };
+                    wordPairs.push(newPair);
+                    saveWordPairs();
+                    renderWordPairList();
                 } else {
-                    showCustomMessage('APIエラー', 'Geminiからの応答がありませんでした。');
+                    showCustomMessage('単語ペアの生成に失敗', 'Geminiからの応答がありませんでした。もう一度お試しください。');
                 }
+
             } catch (error) {
-                console.error('Error generating word pairs:', error);
-                showCustomMessage('エラー', '単語ペアの提案中にエラーが発生しました。もう一度お試しください。');
+                console.error("Error during API call:", error);
+                showCustomMessage('エラー', `単語ペアの生成中にエラーが発生しました: ${error.message}`);
             } finally {
                 button.innerHTML = originalButtonText;
                 button.disabled = false;
@@ -1098,120 +1075,107 @@
         }
         
         async function generateDiscussionPrompt() {
-            if (apiKey === "AIzaSyAn0X1zPAreHP9TXaGZyyXcOF_g3EAW3XE" || !apiKey) {
-                showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
-                return;
-            }
-
             const button = document.getElementById('gemini-discussion-button');
             const originalButtonText = button.innerHTML;
-            button.innerHTML = '<span class="loading-spinner"></span> 質問を提案中...';
+            button.innerHTML = '<span class="loading-spinner"></span> 質問を生成中...';
             button.disabled = true;
             
             const maxRetries = 3;
             const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
             
+            if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
+                showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
+                button.innerHTML = originalButtonText;
+                button.disabled = false;
+                return;
+            }
+
             try {
-                const prompt = `ワードウルフゲームのための議論のお題を提案してください。市民側の単語は「${gameState.civilianWord}」、ウルフ側の単語は「${gameState.wolfWord}」です。単語そのものを直接言わずに、二つの単語の違いが分かるような質問やシチュエーションを一つだけ、日本語で簡潔に提案してください。例：「もし一つだけ食べ物を選べるとしたら、何を食べる？」`;
-                const chatHistory = [];
-                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-                
-                const payload = { contents: chatHistory };
-                
-                let response;
-                let result;
-                for (let i = 0; i <= maxRetries; i++) {
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                    
+                const prompt = `あなたはワードウルフのゲームマスターです。市民側の単語は「${gameState.civilianWord}」、人狼側の単語は「${gameState.wolfWord}」です。この単語ペアでプレイヤーたちが議論を始めるための、一般的で誰もが答えやすい質問を日本語で提案してください。質問は1つだけで、それ以外の説明や文章は含めないでください。`;
+
+                let responseText = null;
+                for (let i = 0; i < maxRetries; i++) {
                     try {
-                        response = await fetch(apiUrl, {
+                        const chatHistory = [];
+                        chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                        const payload = { contents: chatHistory };
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                        const response = await fetch(apiUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
-                        if (response.status !== 429) {
-                            result = await response.json();
-                            break;
+
+                        if (!response.ok) {
+                            throw new Error(`API error: ${response.status} ${response.statusText}`);
                         }
-                        await delay(1000 * (2 ** i));
+
+                        const result = await response.json();
+                        if (result.candidates && result.candidates.length > 0 &&
+                            result.candidates[0].content && result.candidates[0].content.parts &&
+                            result.candidates[0].content.parts.length > 0) {
+                            responseText = result.candidates[0].content.parts[0].text;
+                            break; // 成功したらループを抜ける
+                        } else {
+                            throw new Error('API response format is not as expected.');
+                        }
                     } catch (error) {
-                        console.error('Fetch error:', error);
-                        throw error;
+                        console.error(`Attempt ${i + 1} failed:`, error);
+                        if (i < maxRetries - 1) {
+                            await delay(Math.pow(2, i) * 1000); // 指数バックオフ
+                        }
                     }
                 }
-
-                if (result && result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
-                    const discussionPrompt = result.candidates[0].content.parts[0].text.trim();
-                    showDiscussionModal(discussionPrompt);
+                
+                if (responseText) {
+                    document.getElementById('discussion-prompt-text').textContent = responseText.trim();
+                    document.getElementById('discussion-modal').classList.add('flex');
+                    document.getElementById('discussion-modal').classList.remove('hidden');
                 } else {
-                    showCustomMessage('APIエラー', '議論のお題の提案中にエラーが発生しました。');
+                    showCustomMessage('質問の生成に失敗', 'Geminiからの応答がありませんでした。もう一度お試しください。');
                 }
             } catch (error) {
-                console.error('Error generating discussion prompt:', error);
-                showCustomMessage('エラー', '議論のお題の提案中にエラーが発生しました。もう一度お試しください。');
+                console.error("Error during API call:", error);
+                showCustomMessage('エラー', `質問の生成中にエラーが発生しました: ${error.message}`);
             } finally {
                 button.innerHTML = originalButtonText;
                 button.disabled = false;
             }
         }
-        
-        function showDiscussionModal(promptText) {
-            const modal = document.getElementById('discussion-modal');
-            document.getElementById('discussion-prompt-text').textContent = promptText;
-            modal.classList.add('flex');
-            modal.classList.remove('hidden');
-        }
 
-        function showCustomMessage(title, message, onConfirm, onCancel) {
-            const modalId = 'custom-message-box';
-            let messageBox = document.getElementById(modalId);
-            if (messageBox) {
-                messageBox.remove();
-            }
-
-            messageBox = document.createElement('div');
-            messageBox.id = modalId;
-            messageBox.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50';
-
-            let buttonsHtml = `
-                <button onclick="document.getElementById('${modalId}').remove()" class="bg-[#6f50b4] hover:bg-[#8d71c4] text-white font-bold py-2 px-6 rounded-lg transition-colors">OK</button>
-            `;
-
-            if (onConfirm && onCancel) {
-                buttonsHtml = `
-                    <button id="confirm-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">はい</button>
-                    <button id="cancel-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">いいえ</button>
-                `;
-            }
-
-            messageBox.innerHTML = `
-                <div class="bg-[#2a2a44] p-6 rounded-lg shadow-xl max-w-sm mx-auto text-center">
-                    <h3 class="text-xl font-bold text-white mb-4">${title}</h3>
-                    <p class="text-gray-300 mb-6">${message}</p>
-                    <div class="flex gap-4 justify-center">
-                        ${buttonsHtml}
+        function showCustomMessage(title, message, onConfirm = null, onCancel = null) {
+            const modal = document.createElement('div');
+            modal.className = 'modal fixed inset-0 flex items-center justify-center';
+            modal.innerHTML = `
+                <div class="bg-[#2a2a44] p-6 sm:p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center">
+                    <h2 class="text-xl font-bold mb-4 text-white">${title}</h2>
+                    <p class="text-gray-400 mb-6">${message}</p>
+                    <div class="flex gap-4">
+                        ${onConfirm ? `<button onclick="confirmAction()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">はい</button>` : ''}
+                        ${onConfirm ? `<button onclick="cancelAction()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">いいえ</button>` : ''}
+                        ${!onConfirm ? `<button onclick="closeModal()" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">閉じる</button>` : ''}
                     </div>
                 </div>
             `;
-            document.body.appendChild(messageBox);
-            
-            if (onConfirm && onCancel) {
-                document.getElementById('confirm-btn').onclick = () => {
-                    document.getElementById(modalId).remove();
-                    onConfirm();
-                };
-                document.getElementById('cancel-btn').onclick = () => {
-                    document.getElementById(modalId).remove();
-                    onCancel();
-                };
-            }
-        }
+            document.body.appendChild(modal);
 
-        // 初期化
-        window.onload = function() {
-            // localStorageから単語ペアをロード
+            window.confirmAction = () => {
+                if (onConfirm) onConfirm();
+                modal.remove();
+            };
+
+            window.cancelAction = () => {
+                if (onCancel) onCancel();
+                modal.remove();
+            };
+            
+            window.closeModal = () => {
+                modal.remove();
+            };
+        }
+        
+        // --- 初期化 ---
+        window.onload = () => {
             loadWordPairs();
             render();
         };
@@ -1219,4 +1183,3 @@
     </script>
 </body>
 </html>
-
