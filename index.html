@@ -147,7 +147,7 @@
         let numWolves = 1;
 
         // Gemini API key. Replace with your own key.
-        const apiKey = "YOUR_API_KEY_HERE";
+        const apiKey = "AIzaSyAn0X1zPAreHP9TXaGZyyXcOF_g3EAW3XE";
 
         // --- localStorageの操作関数 ---
         function saveWordPairs() {
@@ -907,7 +907,7 @@
                 return;
             }
 
-            if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
+            if (apiKey === "AIzaSyAn0X1zPAreHP9TXaGZyyXcOF_g3EAW3XE" || !apiKey) {
                 showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
                 return;
             }
@@ -1008,7 +1008,7 @@
         
         // --- Gemini API連携関数 ---
         async function addWordPairFromGemini() {
-            if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
+            if (apiKey === "AIzaSyAn0X1zPAreHP9TXaGZyyXcOF_g3EAW3XE" || !apiKey) {
                 showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
                 return;
             }
@@ -1098,7 +1098,7 @@
         }
         
         async function generateDiscussionPrompt() {
-            if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
+            if (apiKey === "AIzaSyAn0X1zPAreHP9TXaGZyyXcOF_g3EAW3XE" || !apiKey) {
                 showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
                 return;
             }
@@ -1219,3 +1219,4 @@
     </script>
 </body>
 </html>
+
