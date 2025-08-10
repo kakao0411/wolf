@@ -146,6 +146,9 @@
         let numPlayers = 3;
         let numWolves = 1;
 
+        // Gemini API key. Replace with your own key.
+        const apiKey = "YOUR_API_KEY_HERE";
+
         // --- localStorageの操作関数 ---
         function saveWordPairs() {
             localStorage.setItem('wordwolfWordPairs', JSON.stringify(wordPairs));
@@ -904,6 +907,11 @@
                 return;
             }
 
+            if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
+                showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
+                return;
+            }
+
             const button = document.getElementById('start-gemini-themed-button');
             const originalButtonText = button.innerHTML;
             button.innerHTML = '<span class="loading-spinner"></span> 単語を生成中...';
@@ -951,7 +959,6 @@
                 let response;
                 let result;
                 for (let i = 0; i <= maxRetries; i++) {
-                    const apiKey = "";
                     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                     try {
                         response = await fetch(apiUrl, {
@@ -1001,6 +1008,11 @@
         
         // --- Gemini API連携関数 ---
         async function addWordPairFromGemini() {
+            if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
+                showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
+                return;
+            }
+
             const button = document.getElementById('gemini-word-pair-button');
             const originalButtonText = button.innerHTML;
             button.innerHTML = '<span class="loading-spinner"></span> 提案中...';
@@ -1035,7 +1047,6 @@
                 let response;
                 let result;
                 for (let i = 0; i <= maxRetries; i++) {
-                    const apiKey = "";
                     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                     
                     try {
@@ -1087,6 +1098,11 @@
         }
         
         async function generateDiscussionPrompt() {
+            if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
+                showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
+                return;
+            }
+
             const button = document.getElementById('gemini-discussion-button');
             const originalButtonText = button.innerHTML;
             button.innerHTML = '<span class="loading-spinner"></span> 質問を提案中...';
@@ -1105,7 +1121,6 @@
                 let response;
                 let result;
                 for (let i = 0; i <= maxRetries; i++) {
-                    const apiKey = "";
                     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                     
                     try {
