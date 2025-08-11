@@ -3,7 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Word Wolf アプリ</title>
+    <!-- SEO対策：ページのタイトルを最適化 -->
+    <title>ワードウルフ - オンラインで遊べる人狼ゲームアプリ</title>
+    <!-- SEO対策：サイトの説明文を記述 -->
+    <meta name="description" content="複数人でリアルタイムに遊べるワードウルフのオンラインアプリ。友達と単語ペアを作成・共有して、市民と人狼に分かれて議論を楽しもう。">
+    <!-- SEO対策：関連キーワードを記述 -->
+    <meta name="keywords" content="ワードウルフ, 人狼, オンライン, ゲーム, アプリ, 複数人, 協力, 議論, 無料">
+    <!-- OGP設定：SNSでの共有時に表示される情報を設定 -->
+    <meta property="og:title" content="ワードウルフ - オンラインで遊べる人狼ゲームアプリ">
+    <meta property="og:description" content="みんなで遊べるオンラインワードウルフアプリ。単語ペアを共有して、市民と人狼に分かれて議論を楽しもう。リアルタイム同期で友達と盛り上がれる。">
+    <meta property="og:type" content="website">
+    <!-- このアプリをホストするURLに置き換えてください -->
+    <meta property="og:url" content="https://your-github-username.github.io/your-repo-name/">
+    <!-- スクリーンショット画像などを指定できます -->
+    <!-- <meta property="og:image" content="https://example.com/wordwolf-screenshot.png"> -->
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -38,14 +52,29 @@
 </head>
 <body class="p-4 md:p-8 flex items-center justify-center min-h-screen">
 
+    <!-- SEO対策：アプリの紹介コンテンツをトップに追加 (簡略化) -->
+    <div class="bg-[#2a2a44] p-6 sm:p-8 rounded-2xl shadow-2xl max-w-lg w-full mb-6 text-center">
+        <!-- SEO対策：ページ全体を代表するメインの見出し -->
+        <h1 class="text-3xl sm:text-4xl font-bold mb-4 text-white">ワードウルフ オンライン</h1>
+        <p class="text-gray-300 mb-4">
+            友達や家族と楽しめる、リアルタイム同期型のワードウルフアプリです。
+        </p>
+    </div>
+
     <div id="app-container" class="bg-[#2a2a44] p-6 sm:p-8 rounded-2xl shadow-2xl max-w-lg w-full">
-        <!-- Main game content will be rendered here -->
+        <!-- メインゲームコンテンツはここに描画されます -->
         <div id="game-content">
-            <!-- Loading state is removed for this standalone version -->
+             <div class="flex items-center justify-center h-48">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+        <div id="app-info" class="mt-4 text-xs text-gray-500 text-center space-y-1">
+            <p>App ID: <span id="app-id-display"></span></p>
+            <p>User ID: <span id="user-id-display"></span></p>
         </div>
     </div>
 
-    <!-- Modal for editing word pairs -->
+    <!-- 単語ペア編集用モーダル -->
     <div id="word-pair-modal" class="modal fixed inset-0 hidden items-center justify-center">
         <div class="bg-[#2a2a44] p-6 sm:p-8 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h2 class="text-2xl font-bold mb-4 text-white">単語セットの編集</h2>
@@ -71,7 +100,7 @@
         </div>
     </div>
     
-    <!-- Modal for selecting a word pair from the list -->
+    <!-- 単語ペア選択用モーダル -->
     <div id="select-word-modal" class="modal fixed inset-0 hidden items-center justify-center">
         <div class="bg-[#2a2a44] p-6 sm:p-8 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h2 class="text-2xl font-bold mb-4 text-white">単語を選んでゲーム開始</h2>
@@ -86,15 +115,19 @@
         </div>
     </div>
     
-    <!-- Modal for custom messages -->
+    <!-- カスタムメッセージ用モーダル -->
     <div id="custom-message-modal" class="modal fixed inset-0 hidden items-center justify-center">
         <div id="custom-message-content" class="bg-[#2a2a44] p-6 sm:p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center">
-            <!-- Content will be injected here by showCustomMessage function -->
+            <!-- showCustomMessage関数によってコンテンツがここに挿入されます -->
         </div>
     </div>
 
-    <!-- No Firebase SDKs, all logic is here -->
-    <script>
+    <!-- Firebase SDKをインポート -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, updateDoc, deleteDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         // グローバル変数としてゲームの状態を管理
         window.gameState = {
             players: [],
@@ -105,40 +138,146 @@
             voteCounts: {},
             civilianWord: '',
             wolfWord: '',
-            timerDuration: 300,
+            timerDuration: 300, // 5 minutes
             timerId: null,
             isWordVisible: false,
             lastPlayedWordPair: null
         };
+        
+        // Firebase関連の変数
+        let db;
+        let auth;
+        let userId;
 
-        // ローカルに単語ペアを保持
         let wordPairs = [];
         
         const defaultPlayerNames = Array.from({length: 10}, (_, i) => `プレイヤー${i + 1}`);
         let numPlayers = 3;
         let numWolves = 1;
+        
+        // Firestoreパス
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const collectionPath = `artifacts/${appId}/public/data/wordPairs`;
 
 
-        // --- localStorageの操作関数 ---
-        function saveWordPairs() {
-            localStorage.setItem('wordwolfWordPairs', JSON.stringify(wordPairs));
-        }
+        // --- Firebaseの初期化と認証 ---
+        async function initializeFirebase() {
+            try {
+                // 環境変数から設定を取得
+                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                if (Object.keys(firebaseConfig).length === 0) {
+                     throw new Error("Firebase config is not available.");
+                }
 
-        function loadWordPairs() {
-            const storedPairs = localStorage.getItem('wordwolfWordPairs');
-            if (storedPairs) {
-                wordPairs = JSON.parse(storedPairs);
-            } else {
-                // 初回アクセス時のデフォルト単語セット
-                wordPairs = [
-                    { word1: 'チョコレート', word2: 'ココア', playCount: 0 },
-                    { word1: '犬', word2: '猫', playCount: 0 },
-                    { word1: 'テレビ', word2: 'ラジオ', playCount: 0 },
-                ];
-                saveWordPairs();
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                
+                // カスタムトークン認証
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        document.getElementById('app-id-display').textContent = appId;
+                        document.getElementById('user-id-display').textContent = userId;
+                        setupFirestoreListener();
+                    } else {
+                        userId = null;
+                        document.getElementById('app-id-display').textContent = appId;
+                        document.getElementById('user-id-display').textContent = 'Signed out';
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization or authentication failed:", error);
+                document.getElementById('game-content').innerHTML = `
+                    <div class="text-center text-red-500">
+                        <p>アプリの読み込みに失敗しました。</p>
+                        <p>エラー: ${error.message}</p>
+                    </div>
+                `;
             }
         }
+        
+        // Firestoreリスナーの設定（リアルタイム更新用）
+        function setupFirestoreListener() {
+            if (!db) return;
+            const q = query(collection(db, collectionPath));
+            
+            onSnapshot(q, (querySnapshot) => {
+                const fetchedWordPairs = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    fetchedWordPairs.push({ id: doc.id, ...data });
+                });
+                wordPairs = fetchedWordPairs;
+                render();
+            }, (error) => {
+                console.error("Failed to listen to Firestore:", error);
+                showCustomMessage('エラー', '単語リストの取得に失敗しました。');
+            });
+        }
 
+
+        // --- Firestoreの操作関数 ---
+        async function addWordPair() {
+            if (!db) return;
+            const word1 = document.getElementById('new-word-1-input').value.trim();
+            const word2 = document.getElementById('new-word-2-input').value.trim();
+            if (word1 && word2) {
+                try {
+                    await addDoc(collection(db, collectionPath), {
+                        word1: word1,
+                        word2: word2,
+                        playCount: 0
+                    });
+                    document.getElementById('new-word-1-input').value = '';
+                    document.getElementById('new-word-2-input').value = '';
+                } catch (e) {
+                    console.error("Error adding document: ", e);
+                    showCustomMessage('エラー', '単語ペアの追加に失敗しました。');
+                }
+            }
+        }
+        
+        async function removeWordPair(id) {
+            if (!db) return;
+            showCustomMessage(
+                '単語ペア削除',
+                'この単語ペアを本当に削除しますか？',
+                async () => {
+                    try {
+                        await deleteDoc(doc(db, collectionPath, id));
+                    } catch (e) {
+                        console.error("Error removing document: ", e);
+                        showCustomMessage('エラー', '単語ペアの削除に失敗しました。');
+                    }
+                },
+                () => {}
+            );
+        }
+        
+        async function incrementPlayCount(wordPairId) {
+            if (!db) return;
+            try {
+                const docRef = doc(db, collectionPath, wordPairId);
+                const currentPair = wordPairs.find(p => p.id === wordPairId);
+                if (currentPair) {
+                    await updateDoc(docRef, {
+                        playCount: currentPair.playCount + 1
+                    });
+                }
+            } catch (e) {
+                console.error("Error updating play count: ", e);
+            }
+        }
 
         // --- ゲームロジックの関数 ---
         function getCurrentPlayer() { return gameState.players[gameState.currentPlayerIndex]; }
@@ -149,7 +288,7 @@
             }
         }
 
-        function setupGame(predefinedWords = null, playCountIncrementIndex = null) {
+        async function setupGame(predefinedWords = null, playCountIncrementId = null) {
             if (wordPairs.length < 1 && !predefinedWords) {
                 showCustomMessage('ゲーム開始', 'ゲームを始めるには、少なくとも1組の単語ペアが必要です。');
                 return;
@@ -164,16 +303,14 @@
 
             if (predefinedWords) {
                 selectedWords = { word1: predefinedWords.word1, word2: predefinedWords.word2 };
-                // 最後にプレイした単語ペアとして保持
                 gameState.lastPlayedWordPair = selectedWords;
             } else {
-                // ランダムに単語ペアを選択
                 selectedWords = wordPairs[Math.floor(Math.random() * wordPairs.length)];
-                // プレイ回数をインクリメント
-                const index = wordPairs.findIndex(p => p.word1 === selectedWords.word1 && p.word2 === selectedWords.word2);
-                if (index !== -1) {
-                    wordPairs[index].playCount++;
-                    saveWordPairs();
+                if (selectedWords) {
+                     incrementPlayCount(selectedWords.id);
+                } else {
+                    showCustomMessage('エラー', '単語リストが空です。単語を追加してください。');
+                    return;
                 }
             }
             
@@ -209,10 +346,8 @@
                 }
             });
 
-            // 選択された単語でゲームを開始する場合
-            if (playCountIncrementIndex !== null) {
-                wordPairs[playCountIncrementIndex].playCount++;
-                saveWordPairs();
+            if (playCountIncrementId) {
+                incrementPlayCount(playCountIncrementId);
             }
 
             gameState.gamePhase = 'confirmPlayer';
@@ -222,10 +357,10 @@
             render();
         }
         
-        function startSelectedGame(index) {
-            if (index >= 0 && index < wordPairs.length) {
-                const selectedPair = wordPairs[index];
-                setupGame({ word1: selectedPair.word1, word2: selectedPair.word2 }, index);
+        function startSelectedGame(id) {
+            const selectedPair = wordPairs.find(p => p.id === id);
+            if (selectedPair) {
+                setupGame({ word1: selectedPair.word1, word2: selectedPair.word2 }, selectedPair.id);
                 closeSelectWordModal();
             }
         }
@@ -332,7 +467,8 @@
             const initialMinutes = gameState.timerDuration / 60;
 
             container.innerHTML = `
-                <h1 class="text-2xl font-bold mb-6 text-center text-white">ワードウルフ</h1>
+                <!-- SEO対策：アプリのメインタイトルはh1が既に使われているため、h2を使用 -->
+                <h2 class="text-2xl font-bold mb-6 text-center text-white">ゲーム設定</h2>
                 
                 <div class="mb-6">
                     <h3 class="text-xl font-bold text-white mb-2 text-center">プレイヤー人数</h3>
@@ -388,6 +524,11 @@
                 
                 <button onclick="openWordPairModal()" class="w-full mt-2 py-4 rounded-lg font-bold transition-all text-lg bg-gray-600 hover:bg-gray-700">
                     単語セットを編集
+                </button>
+                
+                <!-- 遊び方ボタンを追加 -->
+                <button onclick="showHowToPlayModal()" class="w-full mt-2 py-4 rounded-lg font-bold transition-all text-lg bg-gray-600 hover:bg-gray-700">
+                    遊び方
                 </button>
             `;
         }
@@ -497,13 +638,14 @@
             `;
         }
 
+        // 単語ペアリストのレンダリング
         function renderWordPairList() {
             const listContainer = document.getElementById('word-pair-list');
             if (!listContainer) return;
-            listContainer.innerHTML = wordPairs.map((pair, index) => `
+            listContainer.innerHTML = wordPairs.map(pair => `
                 <div class="flex items-center p-3 my-2 bg-[#3b3b5c] rounded-lg">
                     <span class="flex-1 text-lg">${pair.word1} / ${pair.word2}</span>
-                    <button onclick="removeWordPair(${index})" class="text-red-400 hover:text-red-300 transition-colors">
+                    <button onclick="removeWordPair('${pair.id}')" class="text-red-400 hover:text-red-300 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586l-1.293-1.293z" clip-rule="evenodd" />
                         </svg>
@@ -512,20 +654,20 @@
             `).join('');
         }
         
+        // プレイ回数でソートした単語ペアリストのレンダリング
         function renderSelectWordList() {
              const listContainer = document.getElementById('select-word-list');
             if (!listContainer) return;
 
-            // プレイ回数で降順にソート
             const sortedWordPairs = [...wordPairs].sort((a, b) => b.playCount - a.playCount);
 
-            listContainer.innerHTML = sortedWordPairs.map((pair, index) => `
+            listContainer.innerHTML = sortedWordPairs.map(pair => `
                 <div class="flex items-center justify-between p-3 my-2 bg-[#3b3b5c] rounded-lg">
                     <div class="flex-1">
                         <span class="text-lg">${pair.word1} / ???</span>
                         <span class="text-sm text-gray-400 block">（プレイ回数: ${pair.playCount}回）</span>
                     </div>
-                    <button onclick="startSelectedGame(${index})" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                    <button onclick="startSelectedGame('${pair.id}')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
                         この単語で開始
                     </button>
                 </div>
@@ -620,7 +762,6 @@
                 if (player) {
                     player.name = newName.trim();
                     playerNameEl.textContent = newName.trim();
-                    // update default names array to keep it consistent
                     const playerIndex = gameState.players.findIndex(p => p.id === id);
                     if (playerIndex !== -1 && playerIndex < defaultPlayerNames.length) {
                          defaultPlayerNames[playerIndex] = newName.trim();
@@ -651,29 +792,24 @@
             document.getElementById('select-word-modal').classList.add('hidden');
         }
         
-        function addWordPair() {
-            const word1 = document.getElementById('new-word-1-input').value.trim();
-            const word2 = document.getElementById('new-word-2-input').value.trim();
-            if (word1 && word2) {
-                wordPairs.push({ word1, word2, playCount: 0 });
-                saveWordPairs();
-                renderWordPairList();
-                document.getElementById('new-word-1-input').value = '';
-                document.getElementById('new-word-2-input').value = '';
-            }
-        }
-        
-        function removeWordPair(index) {
-            showCustomMessage(
-                '単語ペア削除',
-                'この単語ペアを本当に削除しますか？',
-                () => {
-                    wordPairs.splice(index, 1);
-                    saveWordPairs();
-                    renderWordPairList();
-                },
-                () => {}
-            );
+        function showHowToPlayModal() {
+            const title = "遊び方";
+            const rules = `
+ワードウルフは、市民と人狼に分かれて行う議論ゲームです。
+
+1.  ゲーム開始時に、各プレイヤーにそれぞれのお題が提示されます。
+    - 市民には同じお題。
+    - 人狼には市民とは少し違うお題。
+
+2.  プレイヤーは、自分のお題を直接言わずに、お題について議論をします。
+
+3.  議論を通じて、市民は人狼が持つ異なるお題を見つけ出します。人狼は自分が人狼であることを悟られないように議論します。
+
+4.  議論の最後に、誰が人狼だと思うか投票します。
+
+5.  最も多く票を集めたプレイヤーが人狼だった場合、市民の勝利。市民だった場合、人狼の勝利となります。
+            `;
+            showCustomMessage(title, rules);
         }
 
         function confirmPlayer() {
@@ -835,8 +971,7 @@
 
         // 初期化
         document.addEventListener('DOMContentLoaded', () => {
-            loadWordPairs();
-            render();
+             initializeFirebase();
         });
 
     </script>
