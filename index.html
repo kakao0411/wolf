@@ -64,22 +64,8 @@
             <button onclick="addWordPair()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">
                 単語ペアを追加
             </button>
-            <button onclick="addWordPairFromGemini()" id="gemini-word-pair-button" class="w-full mt-2 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
-                ✨ Geminiに単語ペアを提案してもらう
-            </button>
             
             <button onclick="closeWordPairModal()" class="w-full mt-4 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">
-                閉じる
-            </button>
-        </div>
-    </div>
-    
-    <!-- Modal for Discussion Prompt -->
-    <div id="discussion-modal" class="modal fixed inset-0 hidden items-center justify-center">
-        <div class="bg-[#2a2a44] p-6 sm:p-8 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto text-center">
-            <h2 class="text-2xl font-bold mb-4 text-white">議論のお題</h2>
-            <p id="discussion-prompt-text" class="text-xl text-gray-300 mb-6"></p>
-            <button onclick="this.parentNode.parentNode.remove()" class="w-full mt-4 bg-[#6f50b4] hover:bg-[#8d71c4] text-white font-bold py-3 px-4 rounded-lg transition-colors">
                 閉じる
             </button>
         </div>
@@ -90,9 +76,7 @@
         <div class="bg-[#2a2a44] p-6 sm:p-8 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h2 class="text-2xl font-bold mb-4 text-white">単語を選んでゲーム開始</h2>
             
-            <button onclick="setupGame()" class="w-full mb-4 py-4 rounded-lg font-bold transition-all text-lg bg-green-500 hover:bg-green-600">
-                ランダムで選んで開始
-            </button>
+            <h3 class="text-xl font-bold text-white mb-2 text-center">プレイ回数ランキング</h3>
 
             <div id="select-word-list" class="mb-4"></div>
             
@@ -101,23 +85,11 @@
             </button>
         </div>
     </div>
-
-    <!-- Modal for Gemini themed game, now a single word -->
-    <div id="gemini-theme-modal" class="modal fixed inset-0 hidden items-center justify-center">
-        <div class="bg-[#2a2a44] p-6 sm:p-8 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <h2 class="text-2xl font-bold mb-4 text-white">単語を決めてゲーム開始</h2>
-            <p class="text-gray-400 mb-4">
-                一つの単語を入力してください。Geminiがもう一つの似た単語を提案します。<br>
-                **最初のプレイヤーには、必ずあなたが入力した単語が割り当てられます。**
-            </p>
-            <input type="text" id="gemini-word-input" placeholder="例: テレビ" class="w-full p-3 rounded-lg bg-[#1a1a2e] text-white mb-4 focus:outline-none focus:ring-2 focus:ring-[#6f50b4]">
-            
-            <button onclick="startGeminiThemedGame()" id="start-gemini-themed-button" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">
-                単語でゲーム開始
-            </button>
-            <button onclick="closeGeminiThemeModal()" class="w-full mt-2 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">
-                閉じる
-            </button>
+    
+    <!-- Modal for custom messages -->
+    <div id="custom-message-modal" class="modal fixed inset-0 hidden items-center justify-center">
+        <div id="custom-message-content" class="bg-[#2a2a44] p-6 sm:p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center">
+            <!-- Content will be injected here by showCustomMessage function -->
         </div>
     </div>
 
@@ -136,7 +108,7 @@
             timerDuration: 300,
             timerId: null,
             isWordVisible: false,
-            lastPlayedWordPair: null // 最後にプレイした単語ペアを格納
+            lastPlayedWordPair: null
         };
 
         // ローカルに単語ペアを保持
@@ -146,8 +118,6 @@
         let numPlayers = 3;
         let numWolves = 1;
 
-        // Gemini API key. Replace with your own key.
-        const apiKey = "AIzaSyAn0X1zPAreHP9TXaGZyyXcOF_g3EAW3XE";
 
         // --- localStorageの操作関数 ---
         function saveWordPairs() {
@@ -179,7 +149,7 @@
             }
         }
 
-        async function setupGame(predefinedWords = null, playCountIncrementIndex = null) {
+        function setupGame(predefinedWords = null, playCountIncrementIndex = null) {
             if (wordPairs.length < 1 && !predefinedWords) {
                 showCustomMessage('ゲーム開始', 'ゲームを始めるには、少なくとも1組の単語ペアが必要です。');
                 return;
@@ -408,8 +378,8 @@
                 </ul>
                 
                 <div class="flex gap-2">
-                    <button onclick="openGeminiThemeModal()" id="gemini-start-button" class="flex-1 py-4 rounded-lg font-bold transition-all text-lg bg-purple-500 hover:bg-purple-600">
-                        単語入力でゲーム開始
+                    <button onclick="setupGame()" class="flex-1 py-4 rounded-lg font-bold transition-all text-lg bg-green-500 hover:bg-green-600">
+                        ランダムでゲーム開始
                     </button>
                     <button onclick="openSelectWordModal()" class="flex-1 py-4 rounded-lg font-bold transition-all text-lg bg-blue-500 hover:bg-blue-600">
                         単語を選んでゲーム開始
@@ -421,17 +391,14 @@
                 </button>
             `;
         }
-        
+
         function renderConfirmPlayerScreen(container) {
             const currentPlayer = getCurrentPlayer();
-            const isLastPlayer = gameState.currentPlayerIndex === gameState.players.length - 1;
-            
             container.innerHTML = `
                 <h2 class="text-2xl font-bold mb-4 text-center text-white">単語の確認</h2>
                 <p class="text-gray-400 mb-6 text-center text-xl font-bold">
                     ${currentPlayer.name} さん、あなたの番ですか？
                 </p>
-
                 <div class="text-center flex flex-col items-center">
                     <button onclick="confirmPlayer()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg transition-colors text-lg w-full max-w-sm">
                         はい
@@ -446,17 +413,14 @@
         function renderRevealScreen(container) {
             const currentPlayer = getCurrentPlayer();
             const isLastPlayer = gameState.currentPlayerIndex === gameState.players.length - 1;
-            
             const wordBoxHiddenClass = gameState.isWordVisible ? '' : 'hidden';
             const showBtnHiddenClass = gameState.isWordVisible ? 'hidden' : '';
             const nextBtnHiddenClass = gameState.isWordVisible ? '' : 'hidden';
-
             container.innerHTML = `
                 <h2 class="text-2xl font-bold mb-4 text-center text-white">${currentPlayer.name}さんの番です。</h2>
                 <p class="text-gray-400 mb-6 text-center">
                     他のプレイヤーに見られないように単語を確認してください。
                 </p>
-
                 <div class="text-center flex flex-col items-center">
                     <div id="word-box" class="text-5xl font-extrabold text-white bg-[#3b3b5c] p-10 rounded-xl shadow-inner mb-6 transition-all duration-300 ${wordBoxHiddenClass}">
                         ${currentPlayer.word}
@@ -486,13 +450,11 @@
 
             const minutes = Math.floor(gameState.timerDuration / 60);
             const seconds = gameState.timerDuration % 60;
-
             container.innerHTML = `
                 <h2 class="text-2xl font-bold mb-4 text-center text-white">議論と投票</h2>
                 <p class="text-gray-400 mb-6 text-center">
                     みんなで議論して、ワードウルフだと思う人に投票してください。
                 </p>
-
                 <div class="flex items-center justify-center gap-4 mb-6">
                     <span id="timer-display" class="text-4xl font-extrabold text-white">
                         ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
@@ -501,216 +463,219 @@
                         +1分
                     </button>
                 </div>
-                
-                <button onclick="generateDiscussionPrompt()" id="gemini-discussion-button" class="w-full mt-4 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
-                    ✨ Geminiに質問を考えてもらう
-                </button>
-
                 <ul class="space-y-3 mt-6">
                     ${playersHtml}
                 </ul>
             `;
             startTimer();
         }
-        
-        async function renderResultsScreen(container) {
-            // ローカルストレージに保存
-            if (gameState.lastPlayedWordPair) {
-                const isDuplicate = wordPairs.some(pair => 
-                    (pair.word1 === gameState.lastPlayedWordPair.word1 && pair.word2 === gameState.lastPlayedWordPair.word2) ||
-                    (pair.word1 === gameState.lastPlayedWordPair.word2 && pair.word2 === gameState.lastPlayedWordPair.word1)
-                );
-                
-                if (!isDuplicate) {
-                    wordPairs.push({ ...gameState.lastPlayedWordPair, playCount: 0 });
-                    saveWordPairs(); // localStorageに保存
-                }
-                gameState.lastPlayedWordPair = null; // 保存後、リセット
-            }
 
-            let votedOutPlayerId = '';
-            let maxVotes = 0;
-            for (const id in gameState.voteCounts) {
-                if (gameState.voteCounts[id] > maxVotes) {
-                    maxVotes = gameState.voteCounts[id];
-                    votedOutPlayerId = id;
-                }
-            }
-
-            const votedOutPlayer = gameState.players.find(p => p.id === votedOutPlayerId);
-            const isWolfVotedOut = votedOutPlayer ? votedOutPlayer.isWolf : false;
-            
-            let winnerMessage = '';
-            if (isWolfVotedOut) {
-                winnerMessage = '市民チーム';
-            } else {
-                winnerMessage = '人狼チーム';
-            }
-            
-            const votedOutPlayerName = votedOutPlayer ? votedOutPlayer.name : 'なし';
-
-            const playerResultsHtml = gameState.players.map((player) => {
-                const roleText = player.isWolf ? '人狼' : '市民';
-                const highlightClass = 'bg-[#3b3b5c] text-white';
-
-                let winLossText = '';
-                if (isWolfVotedOut) {
-                    if (player.isWolf) {
-                        winLossText = '敗北';
-                    } else {
-                        winLossText = '勝利';
-                    }
-                } else {
-                    if (player.isWolf) {
-                        winLossText = '勝利';
-                    } else {
-                        winLossText = '敗北';
-                    }
-                }
-                
-                const winLossClass = winLossText === '勝利' ? 'text-green-400' : 'text-red-400';
-                
-                return `
-                    <li class="flex justify-between items-center p-3 my-2 rounded-lg shadow-md ${highlightClass}">
-                        <div class="flex-1 flex items-center justify-start">
-                            <span class="font-bold mr-2">${player.name}</span>
-                            <span class="text-sm px-2 py-1 rounded-full ${player.isWolf ? 'bg-red-800' : 'bg-green-800'}">${roleText}</span>
-                        </div>
-                        <div class="w-24 font-semibold text-lg text-white text-center">
-                            ${player.word}
-                        </div>
-                        <div class="w-16 font-bold text-center ${winLossClass}">
-                            ${winLossText}
-                        </div>
-                    </li>
-                `;
-            }).join('');
-
+        function renderResultsScreen(container) {
+            const winner = determineWinner();
+            const voteResultHtml = getVoteResultHtml();
+            const wordRevealHtml = getWordRevealHtml();
 
             container.innerHTML = `
-                <h2 class="text-2xl font-bold mb-2 text-center text-white">勝者: ${winnerMessage}</h2>
-                <h3 class="text-xl font-bold mb-4 text-center text-gray-400">追放者: ${votedOutPlayerName}</h3>
+                <h2 class="text-2xl font-bold mb-4 text-center text-white">結果発表</h2>
                 
-                <div class="mb-6">
-                    <ul class="list-none">
-                        ${playerResultsHtml}
-                    </ul>
+                <div class="text-center bg-[#3b3b5c] p-6 rounded-xl shadow-inner mb-6">
+                    ${winner.isWolfsWin ? 
+                        `<h3 class="text-4xl font-extrabold text-red-400 mb-4">人狼チームの勝利！</h3>` :
+                        `<h3 class="text-4xl font-extrabold text-green-400 mb-4">市民チームの勝利！</h3>`
+                    }
+                    <p class="text-xl text-white">追放された人: ${winner.votedPlayer.name}</p>
+                    <p class="text-xl text-white">追放された人の正体: ${winner.votedPlayer.isWolf ? '人狼' : '市民'}</p>
                 </div>
-
-                <button onclick="resetGame()" class="w-full bg-[#6f50b4] hover:bg-[#8d71c4] text-white font-bold py-4 px-8 rounded-lg transition-colors text-lg">
+                
+                ${wordRevealHtml}
+                
+                ${voteResultHtml}
+                
+                <button onclick="resetGame()" class="w-full mt-6 bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-4 rounded-lg transition-colors text-lg">
                     もう一度プレイ
                 </button>
             `;
         }
+
+        function renderWordPairList() {
+            const listContainer = document.getElementById('word-pair-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = wordPairs.map((pair, index) => `
+                <div class="flex items-center p-3 my-2 bg-[#3b3b5c] rounded-lg">
+                    <span class="flex-1 text-lg">${pair.word1} / ${pair.word2}</span>
+                    <button onclick="removeWordPair(${index})" class="text-red-400 hover:text-red-300 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586l-1.293-1.293z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+        }
         
-        // --- イベントハンドラ ---
-        function incrementPlayers() {
+        function renderSelectWordList() {
+             const listContainer = document.getElementById('select-word-list');
+            if (!listContainer) return;
+
+            // プレイ回数で降順にソート
+            const sortedWordPairs = [...wordPairs].sort((a, b) => b.playCount - a.playCount);
+
+            listContainer.innerHTML = sortedWordPairs.map((pair, index) => `
+                <div class="flex items-center justify-between p-3 my-2 bg-[#3b3b5c] rounded-lg">
+                    <div class="flex-1">
+                        <span class="text-lg">${pair.word1} / ???</span>
+                        <span class="text-sm text-gray-400 block">（プレイ回数: ${pair.playCount}回）</span>
+                    </div>
+                    <button onclick="startSelectedGame(${index})" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        この単語で開始
+                    </button>
+                </div>
+            `).join('');
+        }
+        
+
+        // --- UIイベントハンドラ関数 ---
+        function addPlayer() {
             if (numPlayers < 10) {
                 numPlayers++;
-                if (numWolves >= Math.floor(numPlayers / 2)) {
-                    numWolves = Math.floor(numPlayers / 2) - 1;
+                gameState.players.push({ id: crypto.randomUUID(), name: defaultPlayerNames[numPlayers - 1] });
+                document.getElementById('player-count').textContent = numPlayers;
+                render();
+            }
+        }
+
+        function removePlayer(id) {
+            if (numPlayers > 3) {
+                const index = gameState.players.findIndex(player => player.id === id);
+                if (index > -1) {
+                    gameState.players.splice(index, 1);
+                    numPlayers--;
+                    document.getElementById('player-count').textContent = numPlayers;
+                    if (numWolves >= numPlayers) {
+                        numWolves = numPlayers - 1;
+                        document.getElementById('wolf-count').textContent = numWolves;
+                    }
+                    render();
                 }
-                if (numWolves < 1 && numPlayers >= 2) {
-                    numWolves = 1;
+            } else {
+                showCustomMessage('プレイヤー削除', 'プレイヤーは最低3人必要です。');
+            }
+        }
+
+        function decrementPlayers() {
+            if (numPlayers > 3) {
+                numPlayers--;
+                gameState.players.pop();
+                document.getElementById('player-count').textContent = numPlayers;
+                 if (numWolves >= numPlayers) {
+                    numWolves = numPlayers - 1;
+                    document.getElementById('wolf-count').textContent = numWolves;
                 }
                 render();
             }
         }
-        
-        function decrementPlayers() {
-            if (numPlayers > 3) {
-                numPlayers--;
-                if (numWolves >= Math.floor(numPlayers / 2)) {
-                    numWolves = Math.floor(numPlayers / 2) - 1;
-                }
-                if (numWolves < 1) {
-                    numWolves = 1;
-                }
+
+        function incrementPlayers() {
+            if (numPlayers < 10) {
+                numPlayers++;
+                gameState.players.push({ id: crypto.randomUUID(), name: defaultPlayerNames[numPlayers - 1] });
+                document.getElementById('player-count').textContent = numPlayers;
                 render();
-            } else {
-                 showCustomMessage('プレイヤー削除', 'ゲームを始めるには、最低3人のプレイヤーが必要です。');
+            }
+        }
+
+        function decrementWolves() {
+            if (numWolves > 1) {
+                numWolves--;
+                document.getElementById('wolf-count').textContent = numWolves;
             }
         }
 
         function incrementWolves() {
-            if (numWolves < Math.floor(numPlayers / 2)) {
+            if (numWolves < numPlayers - 1) {
                 numWolves++;
-                render();
+                document.getElementById('wolf-count').textContent = numWolves;
             }
         }
-        
-        function decrementWolves() {
-            if (numWolves > 1) {
-                numWolves--;
-                render();
+
+        function decrementTimerDuration() {
+            if (gameState.timerDuration > 60) {
+                gameState.timerDuration -= 60;
+                document.getElementById('timer-setting').textContent = `${gameState.timerDuration / 60}分`;
             }
         }
 
         function incrementTimerDuration() {
-            const currentMinutes = gameState.timerDuration / 60;
-            if (currentMinutes < 10) {
+            if (gameState.timerDuration < 600) {
                 gameState.timerDuration += 60;
-                render();
+                document.getElementById('timer-setting').textContent = `${gameState.timerDuration / 60}分`;
+            }
+        }
+
+        function editPlayerName(id) {
+            const playerNameEl = document.getElementById(`player-name-${id}`);
+            const currentName = playerNameEl.textContent;
+            const newName = prompt(`新しい名前を入力してください (${currentName})`, currentName);
+            if (newName && newName.trim() !== '') {
+                const player = gameState.players.find(p => p.id === id);
+                if (player) {
+                    player.name = newName.trim();
+                    playerNameEl.textContent = newName.trim();
+                    // update default names array to keep it consistent
+                    const playerIndex = gameState.players.findIndex(p => p.id === id);
+                    if (playerIndex !== -1 && playerIndex < defaultPlayerNames.length) {
+                         defaultPlayerNames[playerIndex] = newName.trim();
+                    }
+                }
             }
         }
         
-        function decrementTimerDuration() {
-            const currentMinutes = gameState.timerDuration / 60;
-            if (currentMinutes > 1) {
-                gameState.timerDuration -= 60;
-                render();
-            }
+        function openWordPairModal() {
+            renderWordPairList();
+            document.getElementById('word-pair-modal').classList.remove('hidden');
+            document.getElementById('word-pair-modal').classList.add('flex');
         }
 
-        function addTime() {
-            gameState.timerDuration += 60;
-            updateTimerDisplay();
+        function closeWordPairModal() {
+            document.getElementById('word-pair-modal').classList.remove('flex');
+            document.getElementById('word-pair-modal').classList.add('hidden');
+        }
+        
+        function openSelectWordModal() {
+            renderSelectWordList();
+            document.getElementById('select-word-modal').classList.remove('hidden');
+            document.getElementById('select-word-modal').classList.add('flex');
         }
 
-        function editPlayerName(playerId) {
-            const player = gameState.players.find(p => p.id === playerId);
-            if (!player) return;
-
-            const playerNameElement = document.getElementById(`player-name-${playerId}`);
-            const originalName = player.name;
-            
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = originalName;
-            input.className = 'bg-[#1a1a2e] text-white p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6f50b4]';
-            input.onblur = (e) => {
-                const newName = e.target.value.trim();
-                if (newName) {
-                    player.name = newName;
-                }
-                render();
-            };
-            input.onkeydown = (e) => {
-                if (e.key === 'Enter') {
-                    input.blur();
-                }
-            };
-            
-            playerNameElement.replaceWith(input);
-            input.focus();
+        function closeSelectWordModal() {
+            document.getElementById('select-word-modal').classList.remove('flex');
+            document.getElementById('select-word-modal').classList.add('hidden');
         }
-
-        function removePlayer(playerId) {
-            if (numPlayers > 3) {
-                gameState.players = gameState.players.filter(player => player.id !== playerId);
-                numPlayers--;
-                if (numWolves >= Math.floor(numPlayers / 2)) {
-                    numWolves = Math.floor(numPlayers / 2) - 1;
-                }
-                if (numWolves < 1) {
-                    numWolves = 1;
-                }
-                render();
-            } else {
-                 showCustomMessage('プレイヤー削除', 'ゲームを始めるには、最低3人のプレイヤーが必要です。');
+        
+        function addWordPair() {
+            const word1 = document.getElementById('new-word-1-input').value.trim();
+            const word2 = document.getElementById('new-word-2-input').value.trim();
+            if (word1 && word2) {
+                wordPairs.push({ word1, word2, playCount: 0 });
+                saveWordPairs();
+                renderWordPairList();
+                document.getElementById('new-word-1-input').value = '';
+                document.getElementById('new-word-2-input').value = '';
             }
         }
         
+        function removeWordPair(index) {
+            showCustomMessage(
+                '単語ペア削除',
+                'この単語ペアを本当に削除しますか？',
+                () => {
+                    wordPairs.splice(index, 1);
+                    saveWordPairs();
+                    renderWordPairList();
+                },
+                () => {}
+            );
+        }
+
         function confirmPlayer() {
             gameState.gamePhase = 'reveal';
             render();
@@ -723,462 +688,156 @@
 
         function nextPlayer() {
             gameState.isWordVisible = false;
-            if (gameState.currentPlayerIndex < gameState.players.length - 1) {
-                gameState.currentPlayerIndex++;
+            gameState.currentPlayerIndex++;
+            if (gameState.currentPlayerIndex < gameState.players.length) {
                 gameState.gamePhase = 'confirmPlayer';
-                render();
             } else {
                 gameState.gamePhase = 'vote';
-                render();
             }
+            render();
+        }
+        
+        function addTime() {
+             gameState.timerDuration += 60;
+             updateTimerDisplay();
         }
 
         function confirmRestart() {
-            const onConfirm = () => { restartWithNewWords(); };
-            const onCancel = () => {
-                gameState.isWordVisible = true;
-                render();
-            };
-
             showCustomMessage(
-                '確認',
-                '本当に単語を変更してゲームを再スタートしますか？',
-                onConfirm,
-                onCancel
+                'ゲームリスタート',
+                '単語を変更してゲームをやり直しますか？',
+                () => {
+                    gameState.gamePhase = 'start';
+                    render();
+                },
+                () => {}
             );
         }
 
-        function restartWithNewWords() {
-            setupGame();
+        function determineWinner() {
+            const sortedVotes = Object.entries(gameState.voteCounts).sort(([, a], [, b]) => b - a);
+            const mostVotedPlayerId = sortedVotes[0][0];
+            const votedPlayer = gameState.players.find(p => p.id === mostVotedPlayerId);
+            
+            const isVotedPlayerWolf = votedPlayer.isWolf;
+            const isVotedPlayerTheOnlyWolf = gameState.wolfIndices.length === 1 && isVotedPlayerWolf;
+            const isVotedPlayerOneOfMultipleWolves = gameState.wolfIndices.length > 1 && isVotedPlayerWolf;
+            
+            const civilianWords = gameState.players.filter(p => !p.isWolf).map(p => p.word);
+            const isAllCiviliansVotedForWolf = sortedVotes.every(([id, count]) => {
+                const player = gameState.players.find(p => p.id === id);
+                return player.isWolf || count === 0;
+            });
+            
+            const isWolvesWin = (isVotedPlayerTheOnlyWolf && isAllCiviliansVotedForWolf) ? false : (isVotedPlayerTheOnlyWolf && !isAllCiviliansVotedForWolf);
+
+            const isVotedPlayerWolfsWin = isVotedPlayerWolf === false;
+            
+            return {
+                isWolfsWin: isVotedPlayerWolfsWin,
+                votedPlayer: votedPlayer
+            };
+        }
+
+        function getVoteResultHtml() {
+            const sortedVotes = Object.entries(gameState.voteCounts).sort(([, a], [, b]) => b - a);
+            const totalVotes = Object.values(gameState.voteCounts).reduce((sum, count) => sum + count, 0);
+
+            const voteDetailsHtml = sortedVotes.map(([id, count]) => {
+                const player = gameState.players.find(p => p.id === id);
+                const percentage = totalVotes > 0 ? ((count / totalVotes) * 100).toFixed(1) : 0;
+                return `
+                    <li class="flex items-center justify-between p-3 my-2 bg-[#1a1a2e] rounded-lg">
+                        <span class="text-xl font-bold">${player.name}</span>
+                        <div class="flex items-center">
+                            <span class="text-xl font-bold text-white mr-2">${count}票</span>
+                            <span class="text-sm text-gray-400">(${percentage}%)</span>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+
+            return `
+                <div class="mt-8">
+                    <h3 class="text-2xl font-bold mb-4 text-center text-white">投票結果詳細</h3>
+                    <ul class="space-y-2">
+                        ${voteDetailsHtml}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        function getWordRevealHtml() {
+            let playerWordsHtml = gameState.players.map(player => `
+                <li class="flex items-center justify-between p-3 my-2 bg-[#1a1a2e] rounded-lg">
+                    <span class="text-lg">${player.name}</span>
+                    <span class="text-lg font-bold ${player.isWolf ? 'text-red-400' : 'text-green-400'}">${player.word} (${player.isWolf ? '人狼' : '市民'})</span>
+                </li>
+            `).join('');
+            
+            return `
+                 <div class="mt-8">
+                    <h3 class="text-2xl font-bold mb-4 text-center text-white">全員の単語</h3>
+                    <p class="text-gray-400 text-center mb-2">市民の単語: <span class="font-bold text-green-400">${gameState.civilianWord}</span></p>
+                    <p class="text-gray-400 text-center mb-4">人狼の単語: <span class="font-bold text-red-400">${gameState.wolfWord}</span></p>
+                    <ul class="space-y-2">
+                        ${playerWordsHtml}
+                    </ul>
+                </div>
+            `;
         }
 
         function resetGame() {
             gameState.gamePhase = 'start';
-            stopTimer();
-            gameState.timerDuration = 300; 
-
-            gameState.players.forEach(player => {
-                player.word = '';
-                player.isWolf = false;
-            });
-            gameState.words = [];
-            gameState.wolfIndices = [];
             gameState.currentPlayerIndex = 0;
             gameState.voteCounts = {};
-            gameState.civilianWord = '';
-            gameState.wolfWord = '';
             gameState.isWordVisible = false;
-            gameState.lastPlayedWordPair = null;
-
+            gameState.timerDuration = 300;
             render();
         }
         
-        // --- 単語ペアモーダル関数 ---
-        function openWordPairModal() {
-            document.getElementById('word-pair-modal').classList.add('flex');
-            document.getElementById('word-pair-modal').classList.remove('hidden');
-            renderWordPairList();
-        }
-        
-        function closeWordPairModal() {
-            document.getElementById('word-pair-modal').classList.add('hidden');
-            document.getElementById('word-pair-modal').classList.remove('flex');
-            render();
-        }
-        
-        function renderWordPairList() {
-            const listContainer = document.getElementById('word-pair-list');
-            listContainer.innerHTML = '';
-            
-            const header = document.createElement('div');
-            header.className = 'flex justify-between items-center text-sm font-bold text-gray-400 border-b border-gray-600 pb-2 mb-2';
-            header.innerHTML = `
-                <span class="w-12 text-left">No.</span>
-                <span class="flex-1 text-center">単語A</span>
-                <span class="flex-1 text-center">単語B</span>
-                <span class="w-12 text-center">プレイ回数</span>
-                <span class="w-12 text-right"></span>
-            `;
-            listContainer.appendChild(header);
-
-            wordPairs.forEach((pair, index) => {
-                const item = document.createElement('div');
-                item.className = 'flex justify-between items-center p-2 my-2 bg-[#3b3b5c] rounded-lg';
-                item.innerHTML = `
-                    <span class="w-12 font-bold text-left">${index + 1}.</span>
-                    <span class="flex-1 text-center">${pair.word1}</span>
-                    <span class="flex-1 text-center">${pair.word2}</span>
-                    <span class="w-12 text-center">${pair.playCount || 0}</span>
-                    <button onclick="removeWordPair(${index})" class="text-red-400 hover:text-red-300 transition-colors w-12 flex justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586l-1.293-1.293z" clip-rule="evenodd" />
-                        </svg>
-                    </button>
-                `;
-                listContainer.appendChild(item);
-            });
-        }
-        
-        async function addWordPair() {
-            const word1Input = document.getElementById('new-word-1-input');
-            const word2Input = document.getElementById('new-word-2-input');
-            const word1 = word1Input.value.trim();
-            const word2 = word2Input.value.trim();
-            
-            if (word1 && word2) {
-                wordPairs.push({ word1: word1, word2: word2, playCount: 0 });
-                word1Input.value = '';
-                word2Input.value = '';
-                saveWordPairs(); // localStorageに保存
-                renderWordPairList();
-            } else {
-                showCustomMessage('単語の追加', '2つの単語を入力してください。');
-            }
-        }
-        
-        async function removeWordPair(index) {
-            wordPairs.splice(index, 1);
-            saveWordPairs(); // localStorageに保存
-            renderWordPairList();
-        }
-        
-        // --- 単語選択モーダル関数 ---
-        function openSelectWordModal() {
-            document.getElementById('select-word-modal').classList.add('flex');
-            document.getElementById('select-word-modal').classList.remove('hidden');
-            renderSelectWordList();
-        }
-        
-        function closeSelectWordModal() {
-            document.getElementById('select-word-modal').classList.add('hidden');
-            document.getElementById('select-word-modal').classList.remove('flex');
-        }
-        
-        function renderSelectWordList() {
-            const listContainer = document.getElementById('select-word-list');
-            listContainer.innerHTML = '';
-            
-            // プレイ回数が多い順にソート
-            const sortedPairs = [...wordPairs].sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
-
-            const header = document.createElement('div');
-            header.className = 'flex justify-between items-center text-sm font-bold text-gray-400 border-b border-gray-600 pb-2 mb-2';
-            header.innerHTML = `
-                <span class="w-12 text-left">No.</span>
-                <span class="flex-1 text-center">単語A</span>
-                <span class="flex-1 text-center">単語B</span>
-                <span class="w-12 text-center">プレイ回数</span>
-                <span class="w-24 text-right"></span>
-            `;
-            listContainer.appendChild(header);
-
-            sortedPairs.forEach((pair, index) => {
-                const item = document.createElement('div');
-                item.className = 'flex justify-between items-center p-2 my-2 bg-[#3b3b5c] rounded-lg';
-                item.innerHTML = `
-                    <span class="w-12 font-bold text-left">${index + 1}.</span>
-                    <span class="flex-1 text-center">${pair.word1}</span>
-                    <span class="flex-1 text-center">??</span>
-                    <span class="w-12 text-center">${pair.playCount || 0}</span>
-                    <button onclick="startSelectedGame(${wordPairs.indexOf(pair)})" class="w-24 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">
-                        選択
-                    </button>
-                `;
-                listContainer.appendChild(item);
-            });
-        }
-        
-        // --- Geminiテーマゲーム関数 ---
-        function openGeminiThemeModal() {
-             document.getElementById('gemini-theme-modal').classList.add('flex');
-            document.getElementById('gemini-theme-modal').classList.remove('hidden');
-        }
-
-        function closeGeminiThemeModal() {
-            document.getElementById('gemini-theme-modal').classList.add('hidden');
-            document.getElementById('gemini-theme-modal').classList.remove('flex');
-        }
-
-        async function startGeminiThemedGame() {
-            const wordInput = document.getElementById('gemini-word-input');
-            const inputWord = wordInput.value.trim();
-            if (!inputWord) {
-                showCustomMessage('単語未入力', '単語を入力してください。');
-                return;
-            }
-
-            if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
-                showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
-                return;
-            }
-
-            const button = document.getElementById('start-gemini-themed-button');
-            const originalButtonText = button.innerHTML;
-            button.innerHTML = '<span class="loading-spinner"></span> 単語を生成中...';
-            button.disabled = true;
-
-            const maxRetries = 3;
-            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-            try {
-                // 既存の単語セットに存在するかチェック
-                let existingPairIndex = wordPairs.findIndex(pair => pair.word1 === inputWord || pair.word2 === inputWord);
-                
-                if (existingPairIndex !== -1) {
-                    // 既存の単語セットに一致する場合
-                    wordPairs[existingPairIndex].playCount++;
-                    saveWordPairs();
-                    setupGame({ word1: wordPairs[existingPairIndex].word1, word2: wordPairs[existingPairIndex].word2 });
-                    closeGeminiThemeModal();
-                    return;
-                }
-
-
-                const prompt = `「${inputWord}」という単語と議論が白熱するような、同じレイヤー・カテゴリの単語を一つだけ、日本語で提案してください。例えば「大乱闘スマッシュブラザーズ」に対して「アクションゲーム」ではなく、「マリオカート」や「マインクラフト」のような単語が望ましいです。返答は単語一つのみで、それ以外の説明や文章は一切含めないでください。`;
-
-                let responseText = null;
-                for (let i = 0; i < maxRetries; i++) {
-                    try {
-                        const chatHistory = [];
-                        chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-                        const payload = { contents: chatHistory };
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (!response.ok) {
-                            throw new Error(`API error: ${response.status} ${response.statusText}`);
-                        }
-
-                        const result = await response.json();
-                        if (result.candidates && result.candidates.length > 0 &&
-                            result.candidates[0].content && result.candidates[0].content.parts &&
-                            result.candidates[0].content.parts.length > 0) {
-                            responseText = result.candidates[0].content.parts[0].text;
-                            break; // 成功したらループを抜ける
-                        } else {
-                            throw new Error('API response format is not as expected.');
-                        }
-                    } catch (error) {
-                        console.error(`Attempt ${i + 1} failed:`, error);
-                        if (i < maxRetries - 1) {
-                            await delay(Math.pow(2, i) * 1000); // 指数バックオフ
-                        }
-                    }
-                }
-
-                if (responseText) {
-                    const generatedWord = responseText.trim();
-                    const newPair = { word1: inputWord, word2: generatedWord, playCount: 0 };
-                    gameState.lastPlayedWordPair = newPair;
-                    setupGame({ word1: inputWord, word2: generatedWord });
-                    closeGeminiThemeModal();
-                } else {
-                    showCustomMessage('単語の生成に失敗', 'Geminiからの応答がありませんでした。もう一度お試しください。');
-                }
-
-            } catch (error) {
-                console.error("Error during API call:", error);
-                showCustomMessage('エラー', `単語の生成中にエラーが発生しました: ${error.message}`);
-            } finally {
-                button.innerHTML = originalButtonText;
-                button.disabled = false;
-            }
-        }
-        
-        async function addWordPairFromGemini() {
-            const button = document.getElementById('gemini-word-pair-button');
-            const originalButtonText = button.innerHTML;
-            button.innerHTML = '<span class="loading-spinner"></span> 単語ペアを生成中...';
-            button.disabled = true;
-            
-            const maxRetries = 3;
-            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-            if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
-                showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
-                button.innerHTML = originalButtonText;
-                button.disabled = false;
-                return;
-            }
-
-            try {
-                const prompt = 'ワードウルフのゲームで使える、議論が白熱しそうな単語のペアを日本語で1組だけ提案してください。例：「スマホ, 携帯電話」や「みかん, オレンジ」のような、似ているが明確に違う単語の組み合わせが望ましいです。返答はJSON形式で、`{"word1":"市民側の単語", "word2":"人狼側の単語"}`という構造にしてください。それ以外の説明や文章は一切含めないでください。';
-
-                let responseText = null;
-                for (let i = 0; i < maxRetries; i++) {
-                    try {
-                        const chatHistory = [];
-                        chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-                        const payload = {
-                            contents: chatHistory,
-                            generationConfig: {
-                                responseMimeType: "application/json",
-                                responseSchema: {
-                                    type: "OBJECT",
-                                    properties: {
-                                        "word1": { "type": "STRING" },
-                                        "word2": { "type": "STRING" }
-                                    },
-                                    "propertyOrdering": ["word1", "word2"]
-                                }
-                            }
-                        };
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (!response.ok) {
-                            throw new Error(`API error: ${response.status} ${response.statusText}`);
-                        }
-
-                        const result = await response.json();
-                        if (result.candidates && result.candidates.length > 0 &&
-                            result.candidates[0].content && result.candidates[0].content.parts &&
-                            result.candidates[0].content.parts.length > 0) {
-                            responseText = result.candidates[0].content.parts[0].text;
-                            break; // 成功したらループを抜ける
-                        } else {
-                            throw new Error('API response format is not as expected.');
-                        }
-                    } catch (error) {
-                        console.error(`Attempt ${i + 1} failed:`, error);
-                        if (i < maxRetries - 1) {
-                            await delay(Math.pow(2, i) * 1000); // 指数バックオフ
-                        }
-                    }
-                }
-                
-                if (responseText) {
-                    const parsedJson = JSON.parse(responseText);
-                    const newPair = { word1: parsedJson.word1, word2: parsedJson.word2, playCount: 0 };
-                    wordPairs.push(newPair);
-                    saveWordPairs();
-                    renderWordPairList();
-                } else {
-                    showCustomMessage('単語ペアの生成に失敗', 'Geminiからの応答がありませんでした。もう一度お試しください。');
-                }
-
-            } catch (error) {
-                console.error("Error during API call:", error);
-                showCustomMessage('エラー', `単語ペアの生成中にエラーが発生しました: ${error.message}`);
-            } finally {
-                button.innerHTML = originalButtonText;
-                button.disabled = false;
-            }
-        }
-        
-        async function generateDiscussionPrompt() {
-            const button = document.getElementById('gemini-discussion-button');
-            const originalButtonText = button.innerHTML;
-            button.innerHTML = '<span class="loading-spinner"></span> 質問を生成中...';
-            button.disabled = true;
-            
-            const maxRetries = 3;
-            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-            
-            if (apiKey === "YOUR_API_KEY_HERE" || !apiKey) {
-                showCustomMessage('APIキーが未設定', 'Gemini APIキーを設定してください。');
-                button.innerHTML = originalButtonText;
-                button.disabled = false;
-                return;
-            }
-
-            try {
-                const prompt = `あなたはワードウルフのゲームマスターです。市民側の単語は「${gameState.civilianWord}」、人狼側の単語は「${gameState.wolfWord}」です。この単語ペアでプレイヤーたちが議論を始めるための、一般的で誰もが答えやすい質問を日本語で提案してください。質問は1つだけで、それ以外の説明や文章は含めないでください。`;
-
-                let responseText = null;
-                for (let i = 0; i < maxRetries; i++) {
-                    try {
-                        const chatHistory = [];
-                        chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-                        const payload = { contents: chatHistory };
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (!response.ok) {
-                            throw new Error(`API error: ${response.status} ${response.statusText}`);
-                        }
-
-                        const result = await response.json();
-                        if (result.candidates && result.candidates.length > 0 &&
-                            result.candidates[0].content && result.candidates[0].content.parts &&
-                            result.candidates[0].content.parts.length > 0) {
-                            responseText = result.candidates[0].content.parts[0].text;
-                            break; // 成功したらループを抜ける
-                        } else {
-                            throw new Error('API response format is not as expected.');
-                        }
-                    } catch (error) {
-                        console.error(`Attempt ${i + 1} failed:`, error);
-                        if (i < maxRetries - 1) {
-                            await delay(Math.pow(2, i) * 1000); // 指数バックオフ
-                        }
-                    }
-                }
-                
-                if (responseText) {
-                    document.getElementById('discussion-prompt-text').textContent = responseText.trim();
-                    document.getElementById('discussion-modal').classList.add('flex');
-                    document.getElementById('discussion-modal').classList.remove('hidden');
-                } else {
-                    showCustomMessage('質問の生成に失敗', 'Geminiからの応答がありませんでした。もう一度お試しください。');
-                }
-            } catch (error) {
-                console.error("Error during API call:", error);
-                showCustomMessage('エラー', `質問の生成中にエラーが発生しました: ${error.message}`);
-            } finally {
-                button.innerHTML = originalButtonText;
-                button.disabled = false;
-            }
-        }
-
+        // Custom Modal Function (No window.alert)
         function showCustomMessage(title, message, onConfirm = null, onCancel = null) {
-            const modal = document.createElement('div');
-            modal.className = 'modal fixed inset-0 flex items-center justify-center';
-            modal.innerHTML = `
-                <div class="bg-[#2a2a44] p-6 sm:p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center">
-                    <h2 class="text-xl font-bold mb-4 text-white">${title}</h2>
-                    <p class="text-gray-400 mb-6">${message}</p>
-                    <div class="flex gap-4">
-                        ${onConfirm ? `<button onclick="confirmAction()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">はい</button>` : ''}
-                        ${onConfirm ? `<button onclick="cancelAction()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">いいえ</button>` : ''}
-                        ${!onConfirm ? `<button onclick="closeModal()" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">閉じる</button>` : ''}
-                    </div>
+            const modalContainer = document.getElementById('custom-message-modal');
+            const modalContent = document.getElementById('custom-message-content');
+            
+            modalContent.innerHTML = `
+                <h2 class="text-xl font-bold mb-4 text-white">${title}</h2>
+                <p class="text-gray-400 mb-6">${message}</p>
+                <div class="flex gap-4">
+                    ${onConfirm ? `<button onclick="confirmAction()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">はい</button>` : ''}
+                    ${onConfirm ? `<button onclick="cancelAction()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">いいえ</button>` : ''}
+                    ${!onConfirm ? `<button onclick="closeModal()" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">閉じる</button>` : ''}
                 </div>
             `;
-            document.body.appendChild(modal);
-
+            
             window.confirmAction = () => {
                 if (onConfirm) onConfirm();
-                modal.remove();
+                modalContainer.classList.remove('flex');
+                modalContainer.classList.add('hidden');
             };
 
             window.cancelAction = () => {
                 if (onCancel) onCancel();
-                modal.remove();
+                modalContainer.classList.remove('flex');
+                modalContainer.classList.add('hidden');
             };
             
             window.closeModal = () => {
-                modal.remove();
+                modalContainer.classList.remove('flex');
+                modalContainer.classList.add('hidden');
             };
+
+            modalContainer.classList.remove('hidden');
+            modalContainer.classList.add('flex');
         }
-        
-        // --- 初期化 ---
-        window.onload = () => {
+
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
             loadWordPairs();
             render();
-        };
+        });
 
     </script>
 </body>
